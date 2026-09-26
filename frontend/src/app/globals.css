@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@import "@fontsource/opendyslexic/400.css";
+
+@theme inline {
+  --font-sans: "Lexend", sans-serif;
+  --color-ink: #202c29;
+  --color-muted: #596660;
+  --color-paper: #f6f8f6;
+  --color-line: #dce3de;
+  --color-forest: #246348;
+  --color-forest-dark: #184936;
+  --color-mint: #dcefe4;
+  --color-coral: #ef8b78;
+  --color-yellow: #f4c95d;
+  --color-blue: #79a9d1;
+}
+
+:root {
+  --background: #f6f8f6;
+  --foreground: #202c29;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Lexend", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: #b8d8c5;
+}
