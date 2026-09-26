@@ -1,4 +1,4 @@
-# METIS — AI Integration & Multimodal Runtime Engine
+# METIS — AI Integration & Multimodal Learning Engine
 
 Enterprise-grade, high-performance, zero-cost AI backend for the **METIS** neuro-adaptive learning ecosystem.
 
