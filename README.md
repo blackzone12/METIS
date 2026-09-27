@@ -1,3 +1,18 @@
+@@
+ # Visit http://localhost:8000
+ ```
++
++### Deploying to Vercel
++
++METIS uses two Vercel projects because its Next.js frontend and FastAPI backend have separate runtimes. Import this repository twice:
++
++1. Create the frontend project with **Root Directory** set to `frontend`. Vercel will use `frontend/vercel.json` and build the Next.js app.
++2. Create the backend project with **Root Directory** set to `backend`. Vercel will use `backend/vercel.json` and the FastAPI function in `backend/api/index.py`.
++3. In the frontend project's environment variables, set `NEXT_PUBLIC_API_URL` to the backend deployment URL, without a trailing slash, for example `https://metis-api-your-team.vercel.app`.
++4. In the backend project, set `USE_SQLITE=false`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, and a unique `JWT_SECRET`. Create the MySQL schema using `backend/app/core/dashboard.sql`. Also set the AI provider key you use, such as `GEMINI_API_KEY`.
++5. Redeploy both projects after setting their environment variables.
++
++SQLite is not durable across Vercel Function invocations, so use a managed external MySQL database for persisted learning data. Vercel Functions do not support persistent WebSocket connections; the regular HTTP API works, but live WebSocket telemetry requires a separate WebSocket-capable backend host. Configure `NEXT_PUBLIC_API_URL` to that host if using one. Do not use the default development `JWT_SECRET` in production.
 # METIS — AI Integration & Multimodal Runtime Engine
 
 > Enterprise-grade multimodal AI learning companion featuring Gemini Adaptive Remediation, Scratchpad Vision OCR, Dysgraphia Voice Evaluation, a 7-Tier AI Runtime with JWT gateway, guardrails, hybrid context retrieval, self-attention weighting, KV-cache, and SSE streaming.

@@ -1,3 +1,8 @@
+@@
+ # Mount the static frontend
+-app.mount("/", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="frontend")
++if os.path.isdir(FRONTEND_BUILD_DIR):
++    app.mount("/", StaticFiles(directory=FRONTEND_BUILD_DIR, html=True), name="frontend")
 import logging
 import os
 from contextlib import asynccontextmanager

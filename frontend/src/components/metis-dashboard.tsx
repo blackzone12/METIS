@@ -1,3 +1,18 @@
+@@
+ import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
++import { openRealtimeSocket } from "../lib/api";
+@@
+-    const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
+-    const ws = new WebSocket(wsUrl);
+-    ws.onmessage = (event) => {
+-      try {
+-        const data = JSON.parse(event.data);
+-        console.log("Metis Backend WebSocket:", data);
+-      } catch (e) {}
+-    };
++    const ws = openRealtimeSocket((data) => {
++      console.log("Metis Backend WebSocket:", data);
++    });
 "use client";
 
 import { useEffect, useRef, useState } from "react";
