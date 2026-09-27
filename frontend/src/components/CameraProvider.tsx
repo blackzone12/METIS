@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { createPortal } from "react-dom";
+
 import { useCamera } from "@/components/use-camera";
 
 import {
@@ -29,17 +31,19 @@ interface CameraContextValue {
 }
 
 const CameraContext =
-  createContext<CameraContextValue | null>(
-    null,
-  );
+  createContext<CameraContextValue | null>(null);
+
+/* =========================================================
+   GLOBAL BEHAVIOR WARNING
+   ========================================================= */
 
 function GlobalBehaviorWarning({
   behaviorState,
 }: {
   behaviorState: StudentBehaviorState;
 }) {
-  const [dismissed, setDismissed] =
-    useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const {
     isSquinting,
@@ -49,13 +53,21 @@ function GlobalBehaviorWarning({
   } = behaviorState;
 
   /*
-   * Pick ONE warning at a time.
+   * Make sure the portal is only created after the
+   * component has mounted in the browser.
+   */
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  /*
+   * Choose one warning at a time.
    *
    * Priority:
-   * Squinting
-   * Distraction
-   * Fatigue
-   * Confusion
+   * 1. Squinting
+   * 2. Distraction
+   * 3. Fatigue
+   * 4. Confusion
    */
 
   let warning:
@@ -63,7 +75,8 @@ function GlobalBehaviorWarning({
         title: string;
         message: string;
         icon: string;
-        className: string;
+        background: string;
+        border: string;
       }
     | null = null;
 
@@ -73,8 +86,8 @@ function GlobalBehaviorWarning({
       message:
         "You appear to be squinting. Consider adjusting your screen or taking a short break.",
       icon: "👁️",
-      className:
-        "border-yellow-300 bg-yellow-50 text-yellow-950",
+      background: "#fffbeb",
+      border: "#facc15",
     };
   } else if (isDistracted) {
     warning = {
@@ -82,8 +95,8 @@ function GlobalBehaviorWarning({
       message:
         "Try bringing your attention back to your lesson.",
       icon: "👀",
-      className:
-        "border-red-300 bg-red-50 text-red-950",
+      background: "#fef2f2",
+      border: "#f87171",
     };
   } else if (isFatigued) {
     warning = {
@@ -91,8 +104,8 @@ function GlobalBehaviorWarning({
       message:
         "You may benefit from taking a short break before continuing.",
       icon: "😴",
-      className:
-        "border-purple-300 bg-purple-50 text-purple-950",
+      background: "#faf5ff",
+      border: "#c084fc",
     };
   } else if (isConfused) {
     warning = {
@@ -100,70 +113,169 @@ function GlobalBehaviorWarning({
       message:
         "Let's slow down and break the concept into smaller parts.",
       icon: "💡",
-      className:
-        "border-orange-300 bg-orange-50 text-orange-950",
+      background: "#fff7ed",
+      border: "#fb923c",
     };
   }
 
   /*
-   * Automatically allow the warning to appear again
-   * when the detected condition disappears and
-   * appears again.
+   * If the current condition disappears,
+   * allow a future warning to appear again.
    */
-
   useEffect(() => {
     if (!warning) {
       setDismissed(false);
     }
-  }, [warning?.title]);
+  }, [
+    isSquinting,
+    isConfused,
+    isDistracted,
+    isFatigued,
+  ]);
 
-  if (!warning || dismissed) {
+  /*
+   * Nothing to display.
+   */
+  if (!mounted || !warning || dismissed) {
     return null;
   }
 
-  return (
+  /*
+   * Render directly into document.body.
+   *
+   * This prevents the dashboard's layout, stacking
+   * contexts, overflow rules, transforms, etc. from
+   * hiding the warning.
+   */
+  return createPortal(
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[99999] flex justify-center px-4"
       role="alert"
       aria-live="assertive"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 2147483647,
+        display: "flex",
+        justifyContent: "center",
+        padding: "20px",
+        pointerEvents: "none",
+      }}
     >
       <div
-        className={`pointer-events-auto mt-5 w-full max-w-2xl rounded-3xl border-2 px-6 py-5 shadow-2xl backdrop-blur-md sm:px-8 sm:py-6 ${warning.className}`}
+        style={{
+          width: "100%",
+          maxWidth: "720px",
+          background: warning.background,
+          border: `3px solid ${warning.border}`,
+          borderRadius: "24px",
+          padding: "22px 24px",
+          boxShadow:
+            "0 20px 60px rgba(0, 0, 0, 0.25)",
+          color: "#111827",
+          pointerEvents: "auto",
+          fontFamily:
+            "Lexend, Arial, sans-serif",
+        }}
       >
-        <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-3xl shadow-sm">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "16px",
+          }}
+        >
+          {/* Icon */}
+          <div
+            style={{
+              width: "58px",
+              height: "58px",
+              minWidth: "58px",
+              borderRadius: "16px",
+              background: "rgba(255,255,255,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "30px",
+              boxShadow:
+                "0 4px 12px rgba(0,0,0,0.08)",
+            }}
+          >
             {warning.icon}
           </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-wider opacity-70">
-              Metis study alert
-            </p>
+          {/* Text */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                opacity: 0.6,
+                marginBottom: "4px",
+              }}
+            >
+              Metis Study Alert
+            </div>
 
-            <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+            <div
+              style={{
+                fontSize: "24px",
+                lineHeight: 1.2,
+                fontWeight: 700,
+                marginBottom: "8px",
+              }}
+            >
               {warning.title}
-            </h2>
+            </div>
 
-            <p className="mt-2 text-sm leading-6 opacity-80 sm:text-base">
+            <div
+              style={{
+                fontSize: "15px",
+                lineHeight: 1.5,
+                opacity: 0.8,
+              }}
+            >
               {warning.message}
-            </p>
+            </div>
           </div>
 
+          {/* Dismiss */}
           <button
             type="button"
-            onClick={() =>
-              setDismissed(true)
-            }
-            className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold shadow-sm hover:bg-white"
+            onClick={() => setDismissed(true)}
             aria-label="Dismiss warning"
+            style={{
+              border: "none",
+              borderRadius: "999px",
+              background: "rgba(255,255,255,0.8)",
+              padding: "8px 13px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              color: "#111827",
+              whiteSpace: "nowrap",
+            }}
           >
             Dismiss
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
+
+/* =========================================================
+   CAMERA PROVIDER
+   ========================================================= */
 
 export default function CameraProvider({
   children,
@@ -171,7 +283,6 @@ export default function CameraProvider({
   children: ReactNode;
 }) {
   const {
-    videoRef,
     stream,
     isActive,
     error,
@@ -180,31 +291,21 @@ export default function CameraProvider({
   } = useCamera();
 
   /*
-   * This is the video element MediaPipe continuously
-   * analyzes.
-   *
-   * It is NOT the dashboard preview.
+   * Hidden video element used exclusively for
+   * MediaPipe behavior analysis.
    */
   const analysisVideoRef =
-    useRef<HTMLVideoElement | null>(
-      null,
-    );
+    useRef<HTMLVideoElement | null>(null);
 
-  const [
-    analysisVideo,
-    setAnalysisVideo,
-  ] =
-    useState<HTMLVideoElement | null>(
-      null,
-    );
+  const [analysisVideo, setAnalysisVideo] =
+    useState<HTMLVideoElement | null>(null);
 
   /*
    * Attach the camera stream to the hidden
-   * analysis video.
+   * analysis video whenever the stream changes.
    */
   useEffect(() => {
-    const video =
-      analysisVideoRef.current;
+    const video = analysisVideoRef.current;
 
     if (!video || !stream) {
       return;
@@ -218,31 +319,20 @@ export default function CameraProvider({
   }, [stream]);
 
   /*
-   * Run MediaPipe globally.
+   * Global MediaPipe behavior analysis.
    *
-   * This component lives in layout.tsx,
-   * so it doesn't disappear when dashboard
-   * content changes.
+   * CameraProvider is mounted from layout.tsx,
+   * so this continues running independently of
+   * the dashboard UI.
    */
   const {
     behaviorState,
     modelReady,
-  } =
-    useStudentBehaviorAnalysis(
-      analysisVideo,
-      isActive,
-      false,
-    );
-
-  /*
-   * Capture the hidden video element once
-   * it has mounted.
-   */
-  useEffect(() => {
-    setAnalysisVideo(
-      analysisVideoRef.current,
-    );
-  }, []);
+  } = useStudentBehaviorAnalysis(
+    analysisVideo,
+    isActive,
+    false,
+  );
 
   return (
     <CameraContext.Provider
@@ -256,17 +346,21 @@ export default function CameraProvider({
         stopCamera,
       }}
     >
-      {/*
-       * Hidden camera element used by the
-       * global MediaPipe analysis.
-       */}
+      {/* ============================================
+          HIDDEN ANALYSIS VIDEO
+          ============================================ */}
       <video
         ref={(node) => {
-          analysisVideoRef.current =
-            node;
+          analysisVideoRef.current = node;
 
           if (node) {
             setAnalysisVideo(node);
+
+            if (stream && node.srcObject !== stream) {
+              node.srcObject = stream;
+            }
+
+            node.play().catch(() => {});
           }
         }}
         autoPlay
@@ -284,23 +378,33 @@ export default function CameraProvider({
         }}
       />
 
-      {/*
-       * GLOBAL WARNING
-       *
-       * This is outside the dashboard,
-       * so it appears over every page.
-       */}
+      {/* ============================================
+          GLOBAL BEHAVIOR WARNING
+          ============================================ */}
       <GlobalBehaviorWarning
         behaviorState={behaviorState}
       />
 
-      {/*
-       * Camera permission/error message.
-       */}
+      {/* ============================================
+          CAMERA ERROR
+          ============================================ */}
       {error && (
         <div
-          className="fixed bottom-5 right-5 z-[99998] max-w-sm rounded-2xl bg-white px-4 py-3 text-sm text-black shadow-xl"
           role="alert"
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            zIndex: 2147483646,
+            maxWidth: "380px",
+            background: "white",
+            color: "black",
+            padding: "14px 18px",
+            borderRadius: "16px",
+            boxShadow:
+              "0 10px 30px rgba(0,0,0,0.2)",
+            fontSize: "14px",
+          }}
         >
           {error}
         </div>
@@ -311,9 +415,12 @@ export default function CameraProvider({
   );
 }
 
+/* =========================================================
+   CAMERA CONTEXT HOOK
+   ========================================================= */
+
 export function useCameraContext() {
-  const context =
-    useContext(CameraContext);
+  const context = useContext(CameraContext);
 
   if (!context) {
     throw new Error(
