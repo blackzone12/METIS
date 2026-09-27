@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
+
 import "@fontsource/lexend/400.css";
 import "@fontsource/lexend/500.css";
 import "@fontsource/lexend/600.css";
+
 import "./globals.css";
+
 import CameraProvider from "@/components/CameraProvider";
 
 export const metadata: Metadata = {
   title: "Metis",
-  description: "A learning companion for students.",
+  description:
+    "A learning companion for students.",
 };
 
 export default function RootLayout({
