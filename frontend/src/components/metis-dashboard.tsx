@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useCameraContext } from "./CameraProvider";
+import { useEffect, useRef, useState } from "react";
 import { useLessonAudio } from "./use-lesson-audio";
+import { useCameraContext } from "./CameraProvider";
 import { useDictation } from "./use-dictation";
-import { useStudentBehaviorAnalysis } from "./use-student-behavior-analysis";
 import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
 import {
   BookOpen,
@@ -94,3 +93,4 @@ function ProgressBar({
       className={`h-2 overflow-hidden rounded-full bg-[#dce3de] ${className}`}
     >
       <div
+        className="h-full rounded-full bg-[#246348] transition-all"
