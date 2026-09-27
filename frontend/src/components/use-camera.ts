@@ -126,3 +126,7 @@ export function useCamera() {
     stream,
     isActive,
     error,
+    startCamera,
+    stopCamera,
+  };
+}

@@ -130,6 +130,9 @@ export default function MetisDashboard() {
   const [toast, setToast] = useState("");
   const [tipIndex, setTipIndex] = useState(0);
 
+  const minutes = Math.floor(timer / 60).toString().padStart(2, "0");
+  const seconds = (timer % 60).toString().padStart(2, "0");
+
   const aiTips = [
     "Break difficult material into small pieces and explain each piece in your own words.",
     "Use the Feynman Technique: Try teaching the concept to a 6-year-old to find gaps in your understanding.",
@@ -215,6 +218,11 @@ export default function MetisDashboard() {
       }
     };
   }, []);
+
+  const currentFlashcard = flashcards[flashcardIndex];
+  const lastSpokenRef = useRef(0);
+
+  useEffect(() => {
     const { isConfused, isSquinting, isFatigued, isDistracted } = behaviorState;
     const now = Date.now();
     
@@ -302,7 +310,14 @@ export default function MetisDashboard() {
               <div className="text-xs text-[#596660]">Learning companion</div>
             </div>
           </div>
-                            onClick={() => setActiveTab(item.id)}
+          <nav className="flex flex-col gap-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
                     active
                       ? "bg-[#dcefe4] text-[#184936]"
@@ -522,7 +537,8 @@ export default function MetisDashboard() {
                         {cameraActive ? "Open camera →" : "Camera unavailable →"}
                       </button>
                     </Card>
-                                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff0d6] text-[#9a6814]">
+                    <Card className="p-5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff0d6] text-[#9a6814]">
                         <Mic size={21} />
                       </div>
                       <h3 className="mt-5 font-semibold">Dictation</h3>
