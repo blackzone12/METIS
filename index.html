@@ -1,33 +1,4 @@
-import type { Metadata } from "next";
-import "./globals.css"; // Your styles
 
-export const metadata: Metadata = {
-  title: "METSI:LEARNING COMPANION",
-  description: "A modern, high-performance web application",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body>{children}</body>
-    </html>
-  );
-}
- export default function Page() {
-  return (
-    <main>
-      <h1>Welcome to METSI: LEARNING COMPANION</h1>
-      <p>Your Next.js app is running perfectly.</p>
-    </main>
-  );
-}
  <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,7 +11,7 @@ export default function RootLayout({
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- Corrected: Point to a compiled or native standard JS file, not a TSX component -->
-    <script defer src="./frontend/src/app/main.js"></script>
+    <script defer src="./frontend/src/components/metis-dashboard.tsx"></script>
 </head>
 <body>
    <!-- Corrected: The text link now explicitly shows where it goes -->
