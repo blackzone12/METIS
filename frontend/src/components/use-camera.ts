@@ -41,19 +41,18 @@ export function useCamera() {
       return;
     }
 
-    // Don't request another camera stream if one is already running.
+    // Already running.
     if (streamRef.current) {
       return;
     }
 
     try {
-      const newStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-          },
-          audio: false,
-        });
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+        },
+        audio: false,
+      });
 
       streamRef.current = newStream;
       setStream(newStream);
@@ -70,8 +69,7 @@ export function useCamera() {
 
       setIsActive(true);
     } catch (err) {
-      const name =
-        err instanceof DOMException ? err.name : "";
+      const name = err instanceof DOMException ? err.name : "";
 
       setError(
         cameraErrors[name] ??
@@ -82,10 +80,7 @@ export function useCamera() {
     }
   }, []);
 
-  /*
-   * Automatically start the camera when the component
-   * using this hook is mounted.
-   */
+  // Automatically start the camera when CameraProvider mounts.
   useEffect(() => {
     startCamera();
 
@@ -95,13 +90,9 @@ export function useCamera() {
         .forEach((track) => track.stop());
 
       streamRef.current = null;
-      setStream(null);
     };
   }, [startCamera]);
 
-  /*
-   * Attach the camera stream to the internal video element.
-   */
   const videoRef = useCallback(
     (node: HTMLVideoElement | null) => {
       internalVideoRef.current = node;
