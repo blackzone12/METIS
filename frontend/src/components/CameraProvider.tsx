@@ -1,8 +1,7 @@
 ```tsx
 "use client";
 
-import { useCamera } from "@/hooks/useCamera";
-
+import { useCamera } from "@/components/use-camera";
 export default function CameraProvider() {
   const { videoRef, error } = useCamera();
 
