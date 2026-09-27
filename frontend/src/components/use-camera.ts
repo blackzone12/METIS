@@ -1,4 +1,3 @@
-```tsx
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,12 +16,15 @@ export function useCamera() {
   const internalVideoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState("");
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
+
     streamRef.current = null;
+    setStream(null);
 
     if (internalVideoRef.current) {
       internalVideoRef.current.srcObject = null;
@@ -45,28 +47,31 @@ export function useCamera() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-        },
-        audio: false,
-      });
+      const newStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+          },
+          audio: false,
+        });
 
-      streamRef.current = stream;
+      streamRef.current = newStream;
+      setStream(newStream);
 
       if (internalVideoRef.current) {
-        internalVideoRef.current.srcObject = stream;
+        internalVideoRef.current.srcObject = newStream;
 
         try {
           await internalVideoRef.current.play();
         } catch {
-          // Browser may block autoplay until the user interacts with the page.
+          // Browser may block autoplay until user interaction.
         }
       }
 
       setIsActive(true);
     } catch (err) {
-      const name = err instanceof DOMException ? err.name : "";
+      const name =
+        err instanceof DOMException ? err.name : "";
 
       setError(
         cameraErrors[name] ??
@@ -78,39 +83,46 @@ export function useCamera() {
   }, []);
 
   /*
-   * Automatically start the camera when the component using
-   * this hook is loaded.
+   * Automatically start the camera when the component
+   * using this hook is mounted.
    */
   useEffect(() => {
     startCamera();
 
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current
+        ?.getTracks()
+        .forEach((track) => track.stop());
+
       streamRef.current = null;
+      setStream(null);
     };
   }, [startCamera]);
 
   /*
-   * Attach the camera stream to the video element.
+   * Attach the camera stream to the internal video element.
    */
-  const videoRef = useCallback((node: HTMLVideoElement | null) => {
-    internalVideoRef.current = node;
+  const videoRef = useCallback(
+    (node: HTMLVideoElement | null) => {
+      internalVideoRef.current = node;
 
-    if (node && streamRef.current) {
-      if (node.srcObject !== streamRef.current) {
-        node.srcObject = streamRef.current;
+      if (node && streamRef.current) {
+        if (node.srcObject !== streamRef.current) {
+          node.srcObject = streamRef.current;
+        }
+
+        node.play().catch(() => {});
       }
-
-      node.play().catch(() => {});
-    }
-  }, []);
+    },
+    [],
+  );
 
   return {
     videoRef,
+    stream,
     isActive,
     error,
     startCamera,
     stopCamera,
   };
 }
-```
