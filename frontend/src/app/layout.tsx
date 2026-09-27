@@ -1,4 +1,3 @@
-```tsx
 import type { Metadata } from "next";
 import "@fontsource/lexend/400.css";
 import "@fontsource/lexend/500.css";
@@ -19,10 +18,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <CameraProvider />
-        {children}
+        <CameraProvider>
+          {children}
+        </CameraProvider>
       </body>
     </html>
   );
 }
-```
