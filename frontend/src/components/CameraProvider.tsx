@@ -43,7 +43,7 @@ export default function CameraProvider({
         stopCamera,
       }}
     >
-      {/* Hidden video keeps the camera stream attached */}
+      {/* Hidden video that keeps the camera stream attached */}
       <video
         ref={videoRef}
         autoPlay
