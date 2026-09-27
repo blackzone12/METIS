@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCamera } from "./use-camera";
 import { useLessonAudio } from "./use-lesson-audio";
 import { useDictation } from "./use-dictation";
+import { useStudentBehaviorAnalysis } from "./use-student-behavior-analysis";
 import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
 import {
   BookOpen,
@@ -147,6 +148,17 @@ export default function MetisDashboard() {
     stopCamera,
   } = useCamera();
 
+  // Create a ref for the video element itself so we can pass it to useSquintDetection
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
+
+  // Intercept the video ref to save it locally as well as passing it to useCamera
+  const handleVideoRef = (node: HTMLVideoElement | null) => {
+    videoRef(node);
+    videoElementRef.current = node;
+  };
+
+  const { behaviorState, modelReady } = useStudentBehaviorAnalysis(videoElementRef.current, cameraActive, isMuted);
+
   const {
     isListening: lessonAudioListening,
     transcript: lessonTranscript,
@@ -230,6 +242,37 @@ export default function MetisDashboard() {
   const seconds = (timer % 60).toString().padStart(2, "0");
 
   const currentFlashcard = flashcards[flashcardIndex];
+
+  const lastSpokenRef = useRef<number>(0);
+
+  // Effect to show tips and speak aloud based on user behavior
+  useEffect(() => {
+    const { isConfused, isSquinting, isFatigued, isDistracted } = behaviorState;
+    const now = Date.now();
+    
+    if (!toast && (now - lastSpokenRef.current > 15000)) {
+      let msgToSpeak = "";
+
+      if (isConfused) {
+        showToast("You seem confused. Let's break this down.");
+        msgToSpeak = `You seem confused. Let's break this down. The question is ${currentFlashcard.question}, and the answer is ${currentFlashcard.answer}.`;
+      } else if (isSquinting) {
+        showToast("You're squinting! Let me read it aloud.");
+        msgToSpeak = `You are squinting. Let me read it aloud for you. ${currentFlashcard.question}. The answer is ${currentFlashcard.answer}.`;
+      } else if (isFatigued) {
+        showToast("You look tired. Maybe time for a 5-minute break?");
+        msgToSpeak = "You look tired. Maybe it's time for a short break.";
+      } else if (isDistracted) {
+        showToast("Losing focus? Let me read it to you.");
+        msgToSpeak = `You seem distracted. Let me read the lesson for you. We are learning about ${selectedLesson.title}. Here is a quick review: ${currentFlashcard.question}. ${currentFlashcard.answer}`;
+      }
+
+      if (msgToSpeak && !isMuted && !lessonAudioListening) {
+        startLessonAudio(msgToSpeak);
+        lastSpokenRef.current = now;
+      }
+    }
+  }, [behaviorState, toast, isMuted, lessonAudioListening, currentFlashcard, selectedLesson, startLessonAudio]);
 
   const toggleCompleted = (item: string) => {
     setCompleted((current) =>
@@ -802,15 +845,52 @@ export default function MetisDashboard() {
               </button>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-3xl bg-[#202c29]">
+            <div className="mt-5 relative overflow-hidden rounded-3xl bg-[#202c29]">
               <video
                 id="camera-video"
-                ref={videoRef}
+                ref={handleVideoRef}
                 autoPlay
                 playsInline
                 muted
                 className="aspect-video w-full object-cover -scale-x-100"
               />
+              {cameraActive && !modelReady && (
+                <div className="absolute top-4 left-4 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold backdrop-blur">
+                  Loading AI Model...
+                </div>
+              )}
+              {cameraActive && modelReady && (
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-[#dcefe4] text-[#184936]">
+                    AI Analysis Active
+                  </div>
+                  {behaviorState.isSquinting && (
+                    <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-[#f4c95d] text-[#9a6814]">
+                      Vision Strain detected
+                    </div>
+                  )}
+                  {behaviorState.isConfused && (
+                    <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-orange-200 text-orange-900">
+                      Confusion detected
+                    </div>
+                  )}
+                  {behaviorState.isFatigued && (
+                    <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-purple-200 text-purple-900">
+                      Fatigue detected
+                    </div>
+                  )}
+                  {behaviorState.isDistracted && (
+                    <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-red-200 text-red-900">
+                      Distraction detected
+                    </div>
+                  )}
+                  {behaviorState.isReadingAloud && (
+                    <div className="rounded-full px-3 py-1 text-xs font-semibold backdrop-blur bg-blue-200 text-blue-900">
+                      Reading Aloud
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {cameraError && (
