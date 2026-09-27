@@ -60,6 +60,10 @@ npm run build                 # emits static export to frontend/out/
 IBM BOB 3/
 ├── README.md
 ├── .gitignore
+├── GSD-STYLE.md
+├── PROJECT_RULES.md
+├── Retention_Learner.pdf
+├── run_backend.py
 │
 ├── backend/
 │   ├── run.py                          ← server entry-point (uvicorn)
@@ -133,10 +137,11 @@ IBM BOB 3/
         │   └── globals.css
         │
         ├── components/
-        │   ├── metis-dashboard.tsx     ← main UI (all tabs, modals, API calls)
-        │   ├── use-camera.ts           ← webcam hook (getUserMedia)
-        │   ├── use-dictation.ts        ← speech recognition hook (SpeechRecognition)
-        │   └── use-lesson-audio.ts     ← TTS hook (SpeechSynthesis)
+        │   ├── metis-dashboard.tsx                ← main UI (all tabs, modals, API calls)
+        │   ├── use-camera.ts                      ← webcam hook (getUserMedia)
+        │   ├── use-dictation.ts                   ← speech recognition hook (SpeechRecognition)
+        │   ├── use-lesson-audio.ts                ← TTS hook (SpeechSynthesis)
+        │   └── use-student-behavior-analysis.ts   ← behavior analysis hook
         │
         └── lib/
             ├── api.ts                  ← typed fetch wrapper → FastAPI (port 8000)
