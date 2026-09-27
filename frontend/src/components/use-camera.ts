@@ -1,3 +1,4 @@
+```tsx
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,6 +16,7 @@ const cameraErrors: Record<string, string> = {
 export function useCamera() {
   const internalVideoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,6 +39,11 @@ export function useCamera() {
       return;
     }
 
+    // Don't request another camera stream if one is already running.
+    if (streamRef.current) {
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -49,33 +56,51 @@ export function useCamera() {
 
       if (internalVideoRef.current) {
         internalVideoRef.current.srcObject = stream;
-        await internalVideoRef.current.play();
+
+        try {
+          await internalVideoRef.current.play();
+        } catch {
+          // Browser may block autoplay until the user interacts with the page.
+        }
       }
 
       setIsActive(true);
     } catch (err) {
       const name = err instanceof DOMException ? err.name : "";
+
       setError(
         cameraErrors[name] ??
           "The camera could not be started. Check your browser permissions and try again.",
       );
+
       setIsActive(false);
     }
   }, []);
 
+  /*
+   * Automatically start the camera when the component using
+   * this hook is loaded.
+   */
   useEffect(() => {
+    startCamera();
+
     return () => {
       streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
-  }, []);
+  }, [startCamera]);
 
+  /*
+   * Attach the camera stream to the video element.
+   */
   const videoRef = useCallback((node: HTMLVideoElement | null) => {
     internalVideoRef.current = node;
+
     if (node && streamRef.current) {
-      // Only set srcObject if it has changed to prevent resetting the stream on every render
       if (node.srcObject !== streamRef.current) {
         node.srcObject = streamRef.current;
       }
+
       node.play().catch(() => {});
     }
   }, []);
@@ -88,3 +113,4 @@ export function useCamera() {
     stopCamera,
   };
 }
+```
