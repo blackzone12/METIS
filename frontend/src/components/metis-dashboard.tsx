@@ -99,7 +99,6 @@ function ProgressBar({
     </div>
   );
 }
-
 function Card({
   children,
   className = "",
@@ -115,6 +114,7 @@ function Card({
     </div>
   );
 }
+
 export default function MetisDashboard() {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedLesson, setSelectedLesson] = useState(lessons[0]);
@@ -142,17 +142,16 @@ export default function MetisDashboard() {
     stream: cameraStream,
     isActive: cameraActive,
     error: cameraError,
-    startCamera,
     behaviorState,
     modelReady,
   } = useCameraContext();
-
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
 
   const handleVideoRef = (node: HTMLVideoElement | null) => {
     videoElementRef.current = node;
   };
- useEffect(() => {
+
+  useEffect(() => {
     const video = videoElementRef.current;
 
     if (!video || !cameraStream) {
@@ -199,6 +198,7 @@ export default function MetisDashboard() {
 
   useEffect(() => {
     initDatabase();
+    
     const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
     const ws = new WebSocket(wsUrl);
     ws.onmessage = (event) => {
@@ -215,42 +215,6 @@ export default function MetisDashboard() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!timerRunning) return;
-
-    const interval = window.setInterval(() => {
-      setTimer((current) => {
-        if (current <= 1) {
-          setTimerRunning(false);
-          return 0;
-        }
-
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(interval);
-  }, [timerRunning]);
-
-  useEffect(() => {
-    return () => {
-      stopLessonAudio();
-      stopDictation();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-const minutes = Math.floor(timer / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = (timer % 60).toString().padStart(2, "0");
-
-  const currentFlashcard = flashcards[flashcardIndex];
-
-  const lastSpokenRef = useRef<number>(0);
-
-  // Effect to show tips and speak aloud based on user behavior
-  useEffect(() => {
     const { isConfused, isSquinting, isFatigued, isDistracted } = behaviorState;
     const now = Date.now();
     
@@ -285,7 +249,8 @@ const minutes = Math.floor(timer / 60)
         : [...current, item],
     );
   };
-const nextFlashcard = () => {
+
+  const nextFlashcard = () => {
     setShowAnswer(false);
     setFlashcardIndex((current) => (current + 1) % flashcards.length);
   };
@@ -302,12 +267,10 @@ const nextFlashcard = () => {
     setTimerRunning(false);
   };
 
-  const handleCamera = async () => {
+  const handleCamera = () => {
+    // The camera is already running globally from CameraProvider.
+    // This button only opens the preview.
     setShowCamera(true);
-
-    if (!cameraActive) {
-      await startCamera();
-    }
   };
 
   const handleDictation = () => {
@@ -339,16 +302,7 @@ const nextFlashcard = () => {
               <div className="text-xs text-[#596660]">Learning companion</div>
             </div>
           </div>
-
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = activeTab === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                            onClick={() => setActiveTab(item.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
                     active
                       ? "bg-[#dcefe4] text-[#184936]"
@@ -390,7 +344,8 @@ const nextFlashcard = () => {
                 </div>
                 <span className="font-semibold">Metis</span>
               </div>
-                            <div className="hidden md:block">
+
+              <div className="hidden md:block">
                 <p className="text-sm text-[#596660]">Good morning</p>
                 <h1 className="text-xl font-semibold">Ready to learn?</h1>
               </div>
@@ -417,8 +372,7 @@ const nextFlashcard = () => {
                 >
                   {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
-
-                <button
+<button
                   onClick={() => showToast("Profile settings opened.")}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[#246348] text-sm font-semibold text-white"
                 >
@@ -439,7 +393,8 @@ const nextFlashcard = () => {
                           <Sparkles size={14} />
                           Continue learning
                         </div>
-<h2 className="max-w-xl text-3xl font-semibold leading-tight md:text-4xl">
+
+                        <h2 className="max-w-xl text-3xl font-semibold leading-tight md:text-4xl">
                           {selectedLesson.title}
                         </h2>
 
@@ -489,7 +444,7 @@ const nextFlashcard = () => {
                       </div>
                     </div>
                   </Card>
- <Card className="p-6">
+<Card className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-[#596660]">
@@ -547,7 +502,7 @@ const nextFlashcard = () => {
                       <h2 className="text-2xl font-semibold">
                         Study tools
                       </h2>
-                      </div>
+                    </div>
                   </div>
 
                   <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -564,12 +519,10 @@ const nextFlashcard = () => {
                         onClick={handleCamera}
                         className="mt-5 text-sm font-semibold text-[#246348]"
                       >
-                        {cameraActive ? "Open camera →" : "Start camera →"}
+                        {cameraActive ? "Open camera →" : "Camera unavailable →"}
                       </button>
                     </Card>
-
-                    <Card className="p-5">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff0d6] text-[#9a6814]">
+                                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff0d6] text-[#9a6814]">
                         <Mic size={21} />
                       </div>
                       <h3 className="mt-5 font-semibold">Dictation</h3>
@@ -621,7 +574,7 @@ const nextFlashcard = () => {
                           setTipIndex((current) => (current + 1) % aiTips.length);
                           showToast("Generating new AI tip...");
                         }}
-                         className="mt-5 text-sm font-semibold text-[#246348]"
+                        className="mt-5 text-sm font-semibold text-[#246348]"
                       >
                         Ask AI for another tip →
                       </button>
@@ -721,7 +674,9 @@ const nextFlashcard = () => {
                   </Card>
                 </section>
               </div>
-            )}{activeTab === "lessons" && (
+            )}
+
+            {activeTab === "lessons" && (
               <div className="space-y-6">
                 <div>
                   <p className="text-sm text-[#596660]">Learning library</p>
@@ -758,7 +713,6 @@ const nextFlashcard = () => {
                           </div>
                           <ProgressBar value={lesson.progress} />
                         </div>
-
                         <button
                           onClick={() => {
                             setSelectedLesson(lesson);
@@ -775,7 +729,8 @@ const nextFlashcard = () => {
                 </div>
               </div>
             )}
-{activeTab === "notes" && (
+
+            {activeTab === "notes" && (
               <div className="mx-auto max-w-4xl">
                 <div>
                   <p className="text-sm text-[#596660]">Your workspace</p>
@@ -816,7 +771,8 @@ const nextFlashcard = () => {
           </div>
         </section>
       </div>
- {showCamera && (
+
+      {showCamera && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#202c29]/60 p-4">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between">
@@ -828,15 +784,12 @@ const nextFlashcard = () => {
               </div>
 
               <button
-                onClick={() => {
-                  setShowCamera(false);
-                }}
+                onClick={() => setShowCamera(false)}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-[#dce3de]"
               >
                 <X size={18} />
               </button>
             </div>
-
             <div className="mt-5 relative overflow-hidden rounded-3xl bg-[#202c29]">
               <video
                 id="camera-video"
@@ -894,13 +847,13 @@ const nextFlashcard = () => {
                 </div>
               )}
             </div>
-
-            {cameraError && (
+             {cameraError && (
               <p className="mt-4 rounded-2xl bg-[#f7e6e1] p-4 text-sm text-[#8d4637]">
                 {cameraError}
               </p>
             )}
-<div className="mt-4 flex justify-end gap-3">
+
+            <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={async () => {
                   const video = document.getElementById('camera-video') as HTMLVideoElement;
@@ -937,10 +890,8 @@ const nextFlashcard = () => {
               >
                 Scan Scratchpad
               </button>
-<button
-                onClick={() => {
-                  setShowCamera(false);
-                }}
+              <button
+                onClick={() => setShowCamera(false)}
                 className="rounded-2xl bg-[#246348] px-5 py-3 text-sm font-semibold text-white"
               >
                 Close
@@ -984,7 +935,7 @@ const nextFlashcard = () => {
                 {dictationError}
               </p>
             )}
-            <div className="mt-4 flex justify-between">
+  <div className="mt-4 flex justify-between">
               <div className="flex gap-3">
                 <button
                   onClick={() => setDictationTranscript("")}
@@ -1028,6 +979,7 @@ const nextFlashcard = () => {
           </div>
         </div>
       )}
+
       {lessonAudioListening || lessonTranscript || lessonAudioError ? (
         <div className="fixed bottom-5 right-5 z-40 w-[min(420px,calc(100vw-2rem))] rounded-3xl border border-[#dce3de] bg-white p-5 shadow-xl">
           <div className="flex items-start justify-between gap-4">
@@ -1037,8 +989,7 @@ const nextFlashcard = () => {
                 {lessonAudioListening ? "AI is speaking..." : "Stopped"}
               </p>
             </div>
-
-            <button
+               <button
               onClick={stopLessonAudio}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-[#dce3de]"
             >
@@ -1065,7 +1016,8 @@ const nextFlashcard = () => {
           {toast}
         </div>
       )}
-<nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#dce3de] bg-white/95 px-3 py-2 backdrop-blur lg:hidden">
+
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#dce3de] bg-white/95 px-3 py-2 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-md items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
