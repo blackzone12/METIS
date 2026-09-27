@@ -1,15 +1,49 @@
-```tsx
 "use client";
 
+import {
+  createContext,
+  useContext,
+  type ReactNode,
+} from "react";
+
 import { useCamera } from "@/components/use-camera";
-export default function CameraProvider() {
-  const { videoRef, error } = useCamera();
+
+interface CameraContextValue {
+  stream: MediaStream | null;
+  isActive: boolean;
+  error: string;
+  startCamera: () => Promise<void>;
+  stopCamera: () => void;
+}
+
+const CameraContext =
+  createContext<CameraContextValue | null>(null);
+
+export default function CameraProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const {
+    videoRef,
+    stream,
+    isActive,
+    error,
+    startCamera,
+    stopCamera,
+  } = useCamera();
 
   return (
-    <>
-      {/* Hidden camera element.
-          The camera stream remains active even though
-          the video preview isn't displayed. */}
+    <CameraContext.Provider
+      value={{
+        stream,
+        isActive,
+        error,
+        startCamera,
+        stopCamera,
+      }}
+    >
+      {/* Hidden video keeps the camera stream attached */}
       <video
         ref={videoRef}
         autoPlay
@@ -35,13 +69,27 @@ export default function CameraProvider() {
             borderRadius: "8px",
             background: "#fff",
             color: "#000",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+            boxShadow:
+              "0 4px 12px rgba(0, 0, 0, 0.15)",
           }}
         >
           {error}
         </div>
       )}
-    </>
+
+      {children}
+    </CameraContext.Provider>
   );
 }
-```
+
+export function useCameraContext() {
+  const context = useContext(CameraContext);
+
+  if (!context) {
+    throw new Error(
+      "useCameraContext must be used inside CameraProvider",
+    );
+  }
+
+  return context;
+}
