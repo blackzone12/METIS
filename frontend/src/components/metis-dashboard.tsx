@@ -1,18 +1,3 @@
-@@
- import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
-+import { openRealtimeSocket } from "../lib/api";
-@@
--    const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
--    const ws = new WebSocket(wsUrl);
--    ws.onmessage = (event) => {
--      try {
--        const data = JSON.parse(event.data);
--        console.log("Metis Backend WebSocket:", data);
--      } catch (e) {}
--    };
-+    const ws = openRealtimeSocket((data) => {
-+      console.log("Metis Backend WebSocket:", data);
-+    });
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -82,7 +67,7 @@ const flashcards = [
     answer:
       "Condensation happens when water vapour cools and changes back into tiny liquid water droplets.",
   },
-  {
+{
     question: "What is precipitation?",
     answer:
       "Precipitation is water falling from clouds to Earth's surface as rain, snow, sleet, or hail.",
@@ -114,6 +99,7 @@ function ProgressBar({
     </div>
   );
 }
+
 function Card({
   children,
   className = "",
@@ -129,7 +115,6 @@ function Card({
     </div>
   );
 }
-
 export default function MetisDashboard() {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedLesson, setSelectedLesson] = useState(lessons[0]);
@@ -144,9 +129,6 @@ export default function MetisDashboard() {
   const [showDictation, setShowDictation] = useState(false);
   const [toast, setToast] = useState("");
   const [tipIndex, setTipIndex] = useState(0);
-
-  const minutes = Math.floor(timer / 60).toString().padStart(2, "0");
-  const seconds = (timer % 60).toString().padStart(2, "0");
 
   const aiTips = [
     "Break difficult material into small pieces and explain each piece in your own words.",
@@ -163,6 +145,7 @@ export default function MetisDashboard() {
     behaviorState,
     modelReady,
   } = useCameraContext();
+
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
 
   const handleVideoRef = (node: HTMLVideoElement | null) => {
@@ -182,8 +165,7 @@ export default function MetisDashboard() {
 
     video.play().catch(() => {});
   }, [cameraStream, showCamera]);
-
-  const {
+const {
     isListening: lessonAudioListening,
     transcript: lessonTranscript,
     error: lessonAudioError,
@@ -215,28 +197,63 @@ export default function MetisDashboard() {
   };
 
   useEffect(() => {
-    initDatabase();
-    
-    const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Metis Backend WebSocket:", data);
-      } catch (e) {}
-    };
+    let ws: WebSocket | null = null;
+
+    void initDatabase();
+
+    // Use WSS on HTTPS deployments and WS on local HTTP development.
+    // A WebSocket connection is optional: the dashboard should still work
+    // when no telemetry endpoint is deployed.
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/api/telemetry/ws`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event: MessageEvent<string>) => {
+        try {
+          const data: unknown = JSON.parse(event.data);
+          console.log("Metis Backend WebSocket:", data);
+        } catch {
+          console.warn("Metis received a non-JSON telemetry message.");
+        }
+      };
+
+      ws.onerror = () => {
+        // Keep telemetry failures from interrupting the learning interface.
+        console.info("Metis telemetry WebSocket is unavailable.");
+      };
+    } catch (error) {
+      console.info("Metis telemetry WebSocket could not be opened.", error);
+    }
 
     return () => {
-      ws.close();
+      if (ws && ws.readyState < WebSocket.CLOSING) {
+        ws.close();
+      }
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
       }
     };
   }, []);
+ 
+  useEffect(() => {
+    return () => {
+      stopLessonAudio();
+      stopDictation();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const minutes = Math.floor(timer / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (timer % 60).toString().padStart(2, "0");
 
   const currentFlashcard = flashcards[flashcardIndex];
-  const lastSpokenRef = useRef(0);
 
+  const lastSpokenRef = useRef<number>(0);
+
+  // Effect to show tips and speak aloud based on user behavior
   useEffect(() => {
     const { isConfused, isSquinting, isFatigued, isDistracted } = behaviorState;
     const now = Date.now();
@@ -257,8 +274,7 @@ export default function MetisDashboard() {
         showToast("Losing focus? Let me read it to you.");
         msgToSpeak = `You seem distracted. Let me read the lesson for you. We are learning about ${selectedLesson.title}. Here is a quick review: ${currentFlashcard.question}. ${currentFlashcard.answer}`;
       }
-
-      if (msgToSpeak && !isMuted && !lessonAudioListening) {
+     if (msgToSpeak && !isMuted && !lessonAudioListening) {
         startLessonAudio(msgToSpeak);
         lastSpokenRef.current = now;
       }
@@ -305,7 +321,6 @@ export default function MetisDashboard() {
     setShowDictation(true);
     startDictation();
   };
-
   const navItems = [
     { id: "home", label: "Home", icon: Home },
     { id: "lessons", label: "Lessons", icon: BookOpen },
@@ -325,10 +340,12 @@ export default function MetisDashboard() {
               <div className="text-xs text-[#596660]">Learning companion</div>
             </div>
           </div>
-          <nav className="flex flex-col gap-2">
+
+          <nav className="space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
+
               return (
                 <button
                   key={item.id}
@@ -345,8 +362,7 @@ export default function MetisDashboard() {
               );
             })}
           </nav>
-
-          <div className="mt-auto pt-10">
+         <div className="mt-auto pt-10">
             <button
               onClick={() => showToast("Settings are ready for customization.")}
               className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[#596660] hover:bg-[#f6f8f6]"
@@ -402,7 +418,8 @@ export default function MetisDashboard() {
                 >
                   {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
-<button
+
+                <button
                   onClick={() => showToast("Profile settings opened.")}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[#246348] text-sm font-semibold text-white"
                 >
@@ -451,8 +468,7 @@ export default function MetisDashboard() {
                             View lesson
                           </button>
                         </div>
-
-                        <div className="mt-7">
+                       <div className="mt-7">
                           <div className="mb-2 flex items-center justify-between text-xs">
                             <span className="text-[#596660]">Progress</span>
                             <span className="font-semibold">
@@ -474,7 +490,8 @@ export default function MetisDashboard() {
                       </div>
                     </div>
                   </Card>
-<Card className="p-6">
+
+                  <Card className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-[#596660]">
@@ -495,8 +512,7 @@ export default function MetisDashboard() {
                         {timerRunning ? "Stay focused" : "Ready when you are"}
                       </p>
                     </div>
-
-                    <div className="flex justify-center gap-2">
+                   <div className="flex justify-center gap-2">
                       <button
                         onClick={() => setTimerRunning((current) => !current)}
                         className="flex h-11 items-center gap-2 rounded-2xl bg-[#246348] px-5 text-sm font-semibold text-white"
@@ -552,7 +568,7 @@ export default function MetisDashboard() {
                         {cameraActive ? "Open camera →" : "Camera unavailable →"}
                       </button>
                     </Card>
-                    <Card className="p-5">
+ <Card className="p-5">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff0d6] text-[#9a6814]">
                         <Mic size={21} />
                       </div>
@@ -612,8 +628,7 @@ export default function MetisDashboard() {
                     </Card>
                   </div>
                 </section>
-
-                <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+               <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
                   <Card className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -652,7 +667,8 @@ export default function MetisDashboard() {
                         <ChevronLeft size={17} />
                         Previous
                       </button>
- <button
+
+                      <button
                         onClick={nextFlashcard}
                         className="flex items-center gap-2 rounded-xl bg-[#246348] px-4 py-2 text-sm font-semibold text-white"
                       >
@@ -661,8 +677,7 @@ export default function MetisDashboard() {
                       </button>
                     </div>
                   </Card>
-
-                  <Card className="p-6">
+<Card className="p-6">
                     <div>
                       <p className="text-sm text-[#596660]">Today's plan</p>
                       <h2 className="mt-1 text-2xl font-semibold">
@@ -706,8 +721,7 @@ export default function MetisDashboard() {
                 </section>
               </div>
             )}
-
-            {activeTab === "lessons" && (
+             {activeTab === "lessons" && (
               <div className="space-y-6">
                 <div>
                   <p className="text-sm text-[#596660]">Learning library</p>
@@ -744,6 +758,7 @@ export default function MetisDashboard() {
                           </div>
                           <ProgressBar value={lesson.progress} />
                         </div>
+
                         <button
                           onClick={() => {
                             setSelectedLesson(lesson);
@@ -767,8 +782,7 @@ export default function MetisDashboard() {
                   <p className="text-sm text-[#596660]">Your workspace</p>
                   <h2 className="mt-1 text-3xl font-semibold">Notes</h2>
                 </div>
-
-                <Card className="mt-6 p-6">
+<Card className="mt-6 p-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#dcefe4] text-[#246348]">
                       <FileText size={21} />
@@ -821,7 +835,7 @@ export default function MetisDashboard() {
                 <X size={18} />
               </button>
             </div>
-            <div className="mt-5 relative overflow-hidden rounded-3xl bg-[#202c29]">
+           <div className="mt-5 relative overflow-hidden rounded-3xl bg-[#202c29]">
               <video
                 id="camera-video"
                 ref={(node) => {
@@ -878,7 +892,7 @@ export default function MetisDashboard() {
                 </div>
               )}
             </div>
-             {cameraError && (
+            {cameraError && (
               <p className="mt-4 rounded-2xl bg-[#f7e6e1] p-4 text-sm text-[#8d4637]">
                 {cameraError}
               </p>
@@ -921,6 +935,7 @@ export default function MetisDashboard() {
               >
                 Scan Scratchpad
               </button>
+
               <button
                 onClick={() => setShowCamera(false)}
                 className="rounded-2xl bg-[#246348] px-5 py-3 text-sm font-semibold text-white"
@@ -931,8 +946,7 @@ export default function MetisDashboard() {
           </div>
         </div>
       )}
-
-      {showDictation && (
+{showDictation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#202c29]/60 p-4">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
@@ -966,7 +980,8 @@ export default function MetisDashboard() {
                 {dictationError}
               </p>
             )}
-  <div className="mt-4 flex justify-between">
+
+            <div className="mt-4 flex justify-between">
               <div className="flex gap-3">
                 <button
                   onClick={() => setDictationTranscript("")}
@@ -989,7 +1004,7 @@ export default function MetisDashboard() {
                   Save to Notes
                 </button>
               </div>
-
+             
               <button
                 onClick={handleDictation}
                 className="flex items-center gap-2 rounded-2xl bg-[#246348] px-5 py-3 text-sm font-semibold text-white"
@@ -1020,7 +1035,8 @@ export default function MetisDashboard() {
                 {lessonAudioListening ? "AI is speaking..." : "Stopped"}
               </p>
             </div>
-               <button
+
+            <button
               onClick={stopLessonAudio}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-[#dce3de]"
             >
@@ -1041,7 +1057,6 @@ export default function MetisDashboard() {
           )}
         </div>
       ) : null}
-
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#202c29] px-5 py-3 text-sm font-medium text-white shadow-xl">
           {toast}
@@ -1070,7 +1085,3 @@ export default function MetisDashboard() {
             );
           })}
         </div>
-      </nav>
-    </main>
-  );
-}
