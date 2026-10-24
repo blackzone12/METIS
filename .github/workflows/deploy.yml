@@ -37,6 +37,8 @@ jobs:
 
       - name: Build METIS
         working-directory: frontend
+        env:
+          NEXT_PUBLIC_BASE_PATH: /METIS
         run: npm run build
 
       - name: Upload static website

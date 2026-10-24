@@ -52,6 +52,17 @@ npm run build                 # emits static export to frontend/out/
 # Visit http://localhost:8000
 ```
 
+### GitHub Pages
+
+The GitHub Pages workflow builds the frontend with `NEXT_PUBLIC_BASE_PATH=/METIS`
+so its CSS and JavaScript assets resolve under the repository URL
+`https://blackzone12.github.io/METIS/`. If the repository is renamed, update that
+value in `.github/workflows/deploy.yml` to match the new project path.
+
+GitHub Pages hosts only the static frontend; it does not run the FastAPI backend.
+Set `NEXT_PUBLIC_API_URL` to the public backend URL when building for a deployment
+that uses backend API features.
+
 ---
 
 ## Directory Tree
