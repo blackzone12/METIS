@@ -1,18 +1,3 @@
-@@
- import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
-+import { openRealtimeSocket } from "../lib/api";
-@@
--    const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
--    const ws = new WebSocket(wsUrl);
--    ws.onmessage = (event) => {
--      try {
--        const data = JSON.parse(event.data);
--        console.log("Metis Backend WebSocket:", data);
--      } catch (e) {}
--    };
-+    const ws = openRealtimeSocket((data) => {
-+      console.log("Metis Backend WebSocket:", data);
-+    });
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +5,7 @@ import { useLessonAudio } from "./use-lesson-audio";
 import { useCameraContext } from "./CameraProvider";
 import { useDictation } from "./use-dictation";
 import { initDatabase, syncLogsToBackend, logFrictionEvent } from "../lib/metis_db";
+import { openRealtimeSocket } from "../lib/api";
 import {
   BookOpen,
   Camera,
@@ -216,15 +202,10 @@ export default function MetisDashboard() {
 
   useEffect(() => {
     initDatabase();
-    
-    const wsUrl = typeof window !== 'undefined' ? `ws://${window.location.host}/api/telemetry/ws` : 'ws://127.0.0.1:8000/api/telemetry/ws';
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Metis Backend WebSocket:", data);
-      } catch (e) {}
-    };
+
+    const ws = openRealtimeSocket((data) => {
+      console.log("Metis Backend WebSocket:", data);
+    });
 
     return () => {
       ws.close();

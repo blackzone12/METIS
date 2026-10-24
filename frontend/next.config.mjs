@@ -3,7 +3,7 @@
 
 const nextConfig = {
   output: "export",
-  basePath: "/METIS",
+  trailingSlash: true,
   images: {
     unoptimized: true,
   },

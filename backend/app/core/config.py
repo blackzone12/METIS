@@ -1,11 +1,19 @@
 import os
 from typing import List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve backend/ directory so SQLITE_PATH default is always correct
 # regardless of which working directory the server is launched from.
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
 
 
 class Settings(BaseSettings):
@@ -20,9 +28,14 @@ class Settings(BaseSettings):
     # API Configuration
     APP_NAME: str = "METIS — AI Integration & Multimodal Runtime Engine"
     APP_VERSION: str = "1.0.0"
+    APP_ENV: str = Field(default="development", validation_alias="APP_ENV")
     DEBUG: bool = False
     API_PREFIX: str = "/api"
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = Field(default_factory=lambda: _DEFAULT_CORS_ORIGINS)
+    CORS_ORIGIN_REGEX: str = Field(
+        default=r"https://.*\\.vercel\\.app$|https://.*\\.netlify\\.app$|http://localhost:3000$|http://127.0.0.1:3000$",
+        validation_alias="CORS_ORIGIN_REGEX",
+    )
 
     # Google Gemini & Multimodal Configuration
     GEMINI_API_KEY: str = Field(default="", validation_alias="GEMINI_API_KEY")
@@ -38,7 +51,7 @@ class Settings(BaseSettings):
     USE_MOCK_GEMINI_FALLBACK: bool = True
 
     # AI Runtime Gateway & Security Configuration
-    JWT_SECRET: str = "metis-ai-runtime-super-secret-key-production"
+    JWT_SECRET: str = Field(default="metis-dev-secret-change-me", validation_alias="JWT_SECRET")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_SECONDS: int = 86400  # 24 hours
     GATEWAY_RATE_LIMIT_PER_MINUTE: int = 60
@@ -59,6 +72,26 @@ class Settings(BaseSettings):
     MYSQL_USER: str = Field(default="root", validation_alias="MYSQL_USER")
     MYSQL_PASSWORD: str = Field(default="", validation_alias="MYSQL_PASSWORD")
     MYSQL_DATABASE: str = Field(default="metis", validation_alias="MYSQL_DATABASE")
+
+    def model_post_init(self, __context) -> None:
+        is_production = self.APP_ENV.lower() == "production"
+
+        if is_production and (not self.JWT_SECRET or self.JWT_SECRET == "metis-dev-secret-change-me"):
+            raise ValueError("JWT_SECRET must be set to a non-default secret in production.")
+
+        if is_production and not self.USE_SQLITE and (
+            not self.MYSQL_HOST
+            or not self.MYSQL_USER
+            or not self.MYSQL_PASSWORD
+            or not self.MYSQL_DATABASE
+        ):
+            raise ValueError(
+                "MySQL settings are required when USE_SQLITE=false in production. "
+                "Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DATABASE."
+            )
+
+        if not is_production and not self.JWT_SECRET:
+            self.JWT_SECRET = "metis-dev-secret-change-me"
 
 
 settings = Settings()

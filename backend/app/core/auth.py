@@ -4,11 +4,14 @@ import hmac
 import json
 import time
 from typing import Optional
+
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-SECRET_KEY = "metis-ai-runtime-super-secret-key-production"
+from app.core.config import settings
+
+SECRET_KEY = settings.JWT_SECRET or "metis-dev-secret-change-me"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_SECONDS = 3600 * 24  # 24 hours
 

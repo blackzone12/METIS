@@ -1,10 +1,15 @@
-@@
- const BASE_URL =
--  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-+  (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-@@
--  const wsBase = BASE_URL.replace(/^http/, "ws");
-+  const wsBase = BASE_URL.replace(/^https/, "wss").replace(/^http/, "ws");
+const BASE_URL = (() => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin.replace(/\/$/, "");
+  }
+
+  return "http://127.0.0.1:8000";
+})();
+
 /**
  * METIS API Client
  *
@@ -13,9 +18,6 @@
  *
  * Each function mirrors one FastAPI endpoint and returns the full typed response.
  */
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -318,8 +320,19 @@ export function openRealtimeSocket(
   onMessage: (data: unknown) => void,
   onError?: (e: Event) => void
 ): WebSocket {
-  const wsBase = BASE_URL.replace(/^http/, "ws");
-  const ws = new WebSocket(`${wsBase}/api/telemetry/ws`);
+  const websocketOrigin = (() => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL.replace(/^https/, "wss").replace(/^http/, "ws");
+    }
+
+    if (typeof window !== "undefined") {
+      return window.location.origin.replace(/^https/, "wss").replace(/^http/, "ws");
+    }
+
+    return "ws://127.0.0.1:8000";
+  })();
+
+  const ws = new WebSocket(`${websocketOrigin.replace(/\/$/, "")}/api/telemetry/ws`);
   ws.onmessage = (e) => {
     try {
       onMessage(JSON.parse(e.data as string));
