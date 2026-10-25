@@ -63,6 +63,13 @@ GitHub Pages hosts only the static frontend; it does not run the FastAPI backend
 Set `NEXT_PUBLIC_API_URL` to the public backend URL when building for a deployment
 that uses backend API features.
 
+### Vercel deployment
+
+The frontend is a static export (`output: "export"`), so Vercel should be pointed at
+`frontend/` and configured to publish the generated `frontend/out` directory. The
+`frontend/vercel.json` file now sets the build command and output directory explicitly
+to avoid failed static deploys.
+
 ---
 
 ## Directory Tree
